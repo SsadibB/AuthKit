@@ -1,0 +1,11 @@
+{
+  "name": "com.sadib.authlogin",
+  "version": "1.0.0",
+  "displayName": "Auth Login (PlayFab)",
+  "description": "Reusable PlayFab authentication module. Google Play Games Services is the first provider; built to add Apple/Facebook/etc later without changing the calling API.",
+  "unity": "2021.3",
+  "keywords": ["playfab", "google", "authentication", "login"],
+  "author": {
+    "name": "Sadib"
+  }
+}
