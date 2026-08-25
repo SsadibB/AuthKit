@@ -12,7 +12,7 @@ PlayerSettings:
   targetDevice: 2
   useOnDemandResources: 0
   accelerometerFrequency: 60
-  companyName: DefaultCompany
+  companyName: Sadib
   productName: AuthKit
   defaultCursor: {fileID: 0}
   cursorHotspot: {x: 0, y: 0}
@@ -164,7 +164,8 @@ PlayerSettings:
   androidMaxAspectRatio: 2.4
   androidMinAspectRatio: 1
   applicationIdentifier:
-    Standalone: com.DefaultCompany.2D-URP
+    Android: com.sadib.authkit
+    Standalone: com.sadib.authkit
   buildNumber:
     Standalone: 0
     VisionOS: 0
@@ -180,7 +181,7 @@ PlayerSettings:
   stripEngineCode: 1
   iPhoneStrippingLevel: 0
   iPhoneScriptCallOptimization: 0
-  ForceInternetPermission: 0
+  ForceInternetPermission: 1
   ForceSDCardPermission: 0
   CreateWallpaper: 0
   androidSplitApplicationBinary: 0
