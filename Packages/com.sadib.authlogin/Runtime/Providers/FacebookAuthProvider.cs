@@ -84,7 +84,7 @@ namespace SadibTools.AuthLogin
             {
                 AccessToken = accessToken,
                 CreateAccount = _createPlayFabAccountIfMissing,
-                TitleId = PlayFabSettings.TitleId,
+                TitleId = _settings.PlayFabTitleId,
                 InfoRequestParameters = _fetchPlayerProfileOnLogin
                     ? new GetPlayerCombinedInfoRequestParams
                     {

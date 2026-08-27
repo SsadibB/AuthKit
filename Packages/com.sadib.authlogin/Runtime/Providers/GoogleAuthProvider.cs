@@ -66,7 +66,7 @@ namespace SadibTools.AuthLogin
                 ServerAuthCode = serverAuthCode,
                 CreateAccount = _createPlayFabAccountIfMissing,
                 SetEmail = true,
-                TitleId = PlayFabSettings.TitleId,
+                TitleId = _settings.PlayFabTitleId,
                 InfoRequestParameters = _fetchPlayerProfileOnLogin
                     ? new GetPlayerCombinedInfoRequestParams
                     {

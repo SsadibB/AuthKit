@@ -10,10 +10,15 @@ namespace SadibTools.AuthLogin.Editor
     /// <summary>
     /// Writes Facebook App ID / Client Token from AuthSettings into the Android library strings.xml
     /// so the Facebook SDK can register the fb{appId} custom-tab scheme.
+    /// Works whether the package is installed via UPM (Packages/) or imported as a .unitypackage (Assets/).
     /// </summary>
     internal sealed class AuthLoginFacebookAndroidConfig : IPreprocessBuildWithReport
     {
-        private const string StringsPath =
+        private const string AndroidLibName = "AuthKitGoogleSignIn.androidlib";
+        private const string StringsRelativePath = "res/values/strings.xml";
+
+        // Fallback used only if AssetDatabase lookup fails (should not happen in practice).
+        private const string FallbackStringsPath =
             "Packages/com.sadib.authlogin/Plugins/Android/AuthKitGoogleSignIn.androidlib/res/values/strings.xml";
 
         public int callbackOrder => 0;
@@ -50,10 +55,36 @@ namespace SadibTools.AuthLogin.Editor
             xml.AppendLine("    <string name=\"fb_login_protocol_scheme\">" + EscapeXml(scheme) + "</string>");
             xml.AppendLine("</resources>");
 
-            string fullPath = Path.GetFullPath(StringsPath);
+            string stringsPath = ResolveStringsPath();
+            string fullPath = Path.GetFullPath(stringsPath);
             Directory.CreateDirectory(Path.GetDirectoryName(fullPath));
             File.WriteAllText(fullPath, xml.ToString());
-            Debug.Log("[AuthLogin] Wrote Facebook Android strings for App ID " + appId);
+            Debug.Log("[AuthLogin] Wrote Facebook Android strings to: " + fullPath + " (App ID: " + appId + ")");
+        }
+
+        /// <summary>
+        /// Resolves the strings.xml path dynamically so this works for both:
+        ///   - UPM installs:          Packages/com.sadib.authlogin/Plugins/Android/...
+        ///   - .unitypackage imports: Assets/[AnyFolder]/Plugins/Android/...
+        /// </summary>
+        private static string ResolveStringsPath()
+        {
+            // Search for the androidlib's project.properties file — present in both install modes.
+            string[] guids = AssetDatabase.FindAssets("project.properties");
+            foreach (string guid in guids)
+            {
+                string assetPath = AssetDatabase.GUIDToAssetPath(guid);
+                if (assetPath.Contains(AndroidLibName))
+                {
+                    // Strip the filename to get the library root, then append the target path.
+                    int lastSlash = assetPath.LastIndexOf('/');
+                    string libRoot = assetPath.Substring(0, lastSlash);
+                    return libRoot + "/" + StringsRelativePath;
+                }
+            }
+
+            Debug.LogWarning("[AuthLogin] Could not locate " + AndroidLibName + " via AssetDatabase. Using fallback path.");
+            return FallbackStringsPath;
         }
 
         private static string EscapeXml(string value)

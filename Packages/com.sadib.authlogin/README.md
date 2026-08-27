@@ -1,90 +1,178 @@
-# com.sadib.authlogin
+# Auth Login (PlayFab) — `com.sadib.authlogin`
 
-Reusable PlayFab login module. **Google Account** is the first provider (`LoginWithGoogleAccount`).
-Apple/Facebook/etc can be added later as new `IAuthProvider` implementations without changing
-the API your games call (`AuthManager.Instance.SignInWithGoogle()` stays the same).
+A reusable, self-contained Unity package for authenticating players via **Google Account**, **Facebook**, and **Instagram**, linked seamlessly to **Microsoft PlayFab**.
 
-This is **not** Google Play Games Services. The native Android plugin uses Google's
-Identity **Authorization API** (`requestOfflineAccess`) to get an OAuth server auth code,
-then PlayFab exchanges that code using the **Web application** client ID + secret stored
-in Game Manager.
+---
 
-## Recommended dev setup
+## 🚀 Key Features
 
-Build and test this in its **own Unity project** (e.g. `AuthKit`):
+- **Single unified entry point**: `AuthManager.Instance.SignInWithGoogle()`, `SignInWithFacebook()`, `SignInWithInstagram()`.
+- **Decoupled credentials**: PlayFab Title ID, Google OAuth Web Client ID, Facebook App ID & Client Token all reside in a single ScriptableObject (`AuthSettings.asset`) per project.
+- **Zero code changes between projects**: Drop into any game (e.g. Sudoku, endless runner, RPG), plug in credentials, and wire up UI buttons.
+- **Clean error handling**: Detailed typed error codes (`Cancelled`, `Configuration`, `PlayFab`, `Network`, `Native`, `UnsupportedPlatform`).
+- **Android ready**: Bundles lightweight native Android bridge with EDM (External Dependency Manager) auto-resolution.
 
-```
-AuthKit/
-├── Packages/
-│   └── com.sadib.authlogin/     <- this package (embedded)
-└── Assets/
-    └── Demo/                    <- throwaway test scene
-```
+---
 
-Consuming projects still need the **PlayFab Unity SDK** installed. This package does not bundle PlayFab.
+## 📦 Prerequisites (Per Consuming Game Project)
 
-Google Account login does **not** work in the Unity Editor. Test on a signed Android device build.
+Before importing `AuthLogin`, ensure the target project has:
 
-## Usage
+1. **PlayFab Unity SDK** installed (`PlayFabSDK`).
+2. **Facebook Unity SDK** installed (if using Facebook / Instagram login).
+3. **External Dependency Manager for Unity (EDM4U)** (for resolving Google Play Services dependencies on Android).
 
-1. Create **Auth Login → Auth Settings** and paste your Google **Web application** client ID.
-2. Add `AuthManager` to a persistent GameObject and assign that asset.
-3. Call sign-in from a button:
+---
+
+## 📥 Installation
+
+### Option 1: Via `.unitypackage` (Recommended)
+1. In the **AuthKit** project, click **`Auth Login → Export .unitypackage`** from the top Unity menu bar.
+2. The export file `AuthLogin_v1.0.0.unitypackage` will be generated in `build/` and revealed in Explorer.
+3. In your target project (e.g., Sudoku), select **`Assets → Import Package → Custom Package...`**, select the file, and click **Import**.
+
+### Option 2: Via Unity Package Manager (Local Folder / Git)
+- **Local Disk**: Open Unity Package Manager (`Window → Package Manager`), click `+` → `Add package from disk...`, and select `package.json` inside `Packages/com.sadib.authlogin`.
+- **Git URL**: Click `+` → `Add package from git URL...` and paste your repository URL.
+
+---
+
+## ⚙️ Project Configuration (`AuthSettings`)
+
+1. In your project's `Assets/Resources/` folder, right-click and choose:
+   **`Create → Auth Login → Auth Settings`** (Name the asset `AuthSettings`).
+2. Select the asset in the Inspector and populate your project-specific credentials:
+
+| Section | Field | Description |
+|---|---|---|
+| **PlayFab** | `PlayFab Title ID` | *(Optional)* PlayFab Title ID. If blank, uses PlayFab SDK settings. |
+| **Google** | `Google Web Client ID` | OAuth 2.0 **Web application** Client ID from Google Cloud Console. |
+| **Facebook / Instagram** | `Facebook App ID` | Meta App ID from `developers.facebook.com`. |
+| **Facebook / Instagram** | `Facebook Client Token` | Meta Client Token from App Settings → Advanced. |
+
+---
+
+## 🛠️ One-Time Platform Setup Per Game
+
+### 1. PlayFab Game Manager
+1. Log in to [PlayFab Game Manager](https://developer.playfab.com/).
+2. Select your Title → **Add-ons**:
+   - **Google**: Enable and paste your Google OAuth **Web application Client ID** and **Client Secret**.
+   - **Facebook**: Enable and paste your **Facebook App ID** and **App Secret**.
+
+---
+
+### 2. Google Cloud Console (Google Sign-In)
+1. Go to [Google Cloud Console](https://console.cloud.google.com/) → **APIs & Services → Credentials**.
+2. **Web Application Client** (Backend credentials):
+   - Create an OAuth Client ID of type **Web application**.
+   - Copy this Client ID into `AuthSettings` (Google Web Client ID) and PlayFab's Google Add-on.
+3. **Android Client** (Client authorization):
+   - Create an OAuth Client ID of type **Android**.
+   - Set **Package name** = your game's Android Package Name (e.g., `com.yourcompany.game`).
+   - Set **SHA-1 certificate fingerprint** from your Keystore (Debug & Release keystores).
+
+---
+
+### 3. Meta for Developers (Facebook & Instagram)
+1. Go to [Meta for Developers](https://developers.facebook.com/) → **My Apps**.
+2. Create an App with **Facebook Login** product enabled.
+3. Under **App Settings → Basic → Android**:
+   - Package Name = your game's Android Package Name.
+   - Add your **Key Hashes** (base64 SHA-1 hash of your debug and release keystores).
+4. Under **App Settings → Advanced**:
+   - Copy the **Client Token** into `AuthSettings`.
+5. *(For Instagram)*: Meta uses Facebook Login for Instagram integration. The package requests `public_profile` scope to securely link the Meta account to PlayFab.
+
+---
+
+## 💻 Code Usage
+
+### 1. Initialize & Listen for Events
 
 ```csharp
-void Start()
-{
-    AuthManager.Instance.OnLoginSuccess += session =>
-        Debug.Log($"Welcome PlayFabId={session.PlayFabId} new={session.NewlyCreated}");
-    AuthManager.Instance.OnLoginFailure += error =>
-        Debug.LogError(error.ToString());
-}
+using UnityEngine;
+using SadibTools.AuthLogin;
 
-void OnGoogleButtonPressed()
+public class LoginController : MonoBehaviour
 {
-    AuthManager.Instance.SignInWithGoogle(silent: false);
+    private void Start()
+    {
+        // Subscribe to authentication events
+        AuthManager.Instance.OnLoginStarted += OnLoginStarted;
+        AuthManager.Instance.OnLoginSuccess += OnLoginSuccess;
+        AuthManager.Instance.OnLoginFailure += OnLoginFailure;
+    }
+
+    private void OnDestroy()
+    {
+        if (AuthManager.Instance != null)
+        {
+            AuthManager.Instance.OnLoginStarted -= OnLoginStarted;
+            AuthManager.Instance.OnLoginSuccess -= OnLoginSuccess;
+            AuthManager.Instance.OnLoginFailure -= OnLoginFailure;
+        }
+    }
+
+    private void OnLoginStarted(string providerId)
+    {
+        Debug.Log($"Connecting via {providerId}...");
+    }
+
+    private void OnLoginSuccess(AuthSession session)
+    {
+        Debug.Log($"Logged in via {session.ProviderId}!");
+        Debug.Log($"PlayFab ID: {session.PlayFabId}");
+        Debug.Log($"Display Name: {session.DisplayName}");
+        Debug.Log($"Email: {session.Email}");
+        Debug.Log($"Newly created account: {session.NewlyCreated}");
+    }
+
+    private void OnLoginFailure(AuthError error)
+    {
+        Debug.LogError($"Login failed: [{error.Code}] {error.Message}");
+    }
 }
 ```
 
-`AuthManager` Inspector toggles:
+### 2. Triggering Sign In
 
-- `autoSignInSilentlyOnStart` — try a silent Google login on scene start; fails quietly if it cannot.
-- `createPlayFabAccountIfMissing` — auto-create a PlayFab account on first login.
-- `fetchPlayerProfileOnLogin` — pull PlayFab account/profile info in the same call.
+You can wire these directly in the Unity Inspector to standard UI Button `OnClick()` events:
 
-## One-time setup per game project
+```csharp
+// Google Sign-In
+public void OnGoogleButtonClicked()
+{
+    AuthManager.Instance.SignInWithGoogle();
+}
 
-### PlayFab
+// Facebook Sign-In
+public void OnFacebookButtonClicked()
+{
+    AuthManager.Instance.SignInWithFacebook();
+}
 
-1. Import the PlayFab Unity SDK and set **Title ID** (this harness uses `10B581`).
-2. Game Manager → Add-ons → **Google**.
-3. Paste the OAuth **Web application** client ID **and** client secret. The secret never goes in the Unity client.
+// Instagram Sign-In
+public void OnInstagramButtonClicked()
+{
+    AuthManager.Instance.SignInWithInstagram();
+}
 
-### Google Cloud Console
+// Sign Out
+public void OnSignOutButtonClicked()
+{
+    AuthManager.Instance.SignOut();
+}
+```
 
-1. Create an OAuth **Web application** client. This ID goes in `AuthSettings` and in the PlayFab Google add-on.
-2. Create an OAuth **Android** client:
-   - Package name = Unity Android application id (`com.sadib.authkit` in this harness)
-   - SHA-1 of the **debug** keystore and the **release** keystore (Play App Signing SHA-1 if you use it)
-3. If the OAuth consent screen is in Testing, add every test Gmail as a tester.
+---
 
-Mismatched SHA-1, or pasting the Android client ID where the Web client ID is required, is the usual production failure.
+## 🔍 Troubleshooting
 
-### Android
+| Issue | Cause & Fix |
+|---|---|
+| **Google returns `10: Developer Error` or `12500`** | Mismatch between the Keystore SHA-1 fingerprint and the Android OAuth Client in Google Cloud Console, or the Android Package Name does not match. |
+| **Facebook returns "Invalid Key Hash"** | The debug/release keystore key hash added to Meta Developer Portal does not match the APK signature. Generate the base64 hash with `keytool -exportcert -alias <alias> -keystore <keystore> \| openssl sha1 -binary \| openssl base64`. |
+| **Facebook / Instagram strings missing on Android build** | The package automatically writes `res/values/strings.xml` on Android pre-build. You can also trigger it manually from **`Auth Login → Write Facebook Android Strings`**. |
+| **Google Sign-In fails in Unity Editor** | Native Google Identity Authorization API runs exclusively on Android devices (`#if UNITY_ANDROID && !UNITY_EDITOR`). Test using an Android APK / App Bundle on a real device. |
 
-- Application id must match the Android OAuth client.
-- Internet permission is required (this package's Android library declares it).
-- After import, let External Dependency Manager resolve `play-services-auth` when prompted.
-
-## Shipping into other projects
-
-- **Git URL (recommended)** — push `Packages/com.sadib.authlogin` to its own repo and add it from Package Manager.
-- **`.unitypackage` export** — simpler, no auto-updates.
-
-Every consuming project still needs its own PlayFab SDK plus Google Cloud / PlayFab Google add-on configuration.
-
-## Adding a new provider later (e.g. Apple)
-
-1. Add `Providers/AppleAuthProvider.cs` implementing `IAuthProvider`.
-2. In `AuthManager`, add a private `_apple` field and `SignInWithApple(bool silent = false)` that calls the same `SignIn` helper.
-3. Nothing else changes. Projects only using `SignInWithGoogle()` are unaffected.
