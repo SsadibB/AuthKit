@@ -5,9 +5,7 @@ namespace SadibTools.AuthLogin
 {
     /// <summary>
     /// The single entry point your game code talks to. Drop on a persistent GameObject
-    /// (or let it self-instantiate) in each project's login flow.
-    ///
-    ///   AuthManager.Instance.SignInWithGoogle();
+    /// and wire UI Button On Click() in the Inspector to SignInWithGoogle / Facebook / Instagram.
     /// </summary>
     [DefaultExecutionOrder(-100)]
     public class AuthManager : MonoBehaviour
@@ -23,6 +21,7 @@ namespace SadibTools.AuthLogin
 
         public event Action<AuthSession> OnLoginSuccess;
         public event Action<AuthError> OnLoginFailure;
+        public event Action<string> OnLoginStarted;
 
         public bool IsSignedIn { get; private set; }
         public bool IsBusy { get; private set; }
@@ -33,13 +32,15 @@ namespace SadibTools.AuthLogin
         public AuthSettings Settings => settings;
 
         private GoogleAuthProvider _google;
+        private FacebookAuthProvider _facebook;
+        private FacebookAuthProvider _instagram;
 
         public static AuthManager EnsureInstance()
         {
             if (Instance != null)
                 return Instance;
 
-            var existing = FindObjectOfType<AuthManager>();
+            var existing = FindAnyObjectByType<AuthManager>();
             if (existing != null)
                 return existing;
 
@@ -76,12 +77,24 @@ namespace SadibTools.AuthLogin
         private void RebuildProvider()
         {
             _google = new GoogleAuthProvider(settings, createPlayFabAccountIfMissing, fetchPlayerProfileOnLogin);
+            _facebook = new FacebookAuthProvider(
+                settings,
+                FacebookAuthProvider.FacebookId,
+                FacebookAuthProvider.FacebookPermissions,
+                createPlayFabAccountIfMissing,
+                fetchPlayerProfileOnLogin);
+            _instagram = new FacebookAuthProvider(
+                settings,
+                FacebookAuthProvider.InstagramId,
+                FacebookAuthProvider.InstagramPermissions,
+                createPlayFabAccountIfMissing,
+                fetchPlayerProfileOnLogin);
         }
 
         private void Start()
         {
             if (autoSignInSilentlyOnStart)
-                SignInWithGoogle(silent: true);
+                SignIn(_google, silent: true);
         }
 
         private void OnDestroy()
@@ -90,15 +103,34 @@ namespace SadibTools.AuthLogin
                 Instance = null;
         }
 
-        /// <summary>Call from a "Sign in with Google" button with silent:false to show the account picker.</summary>
-        public void SignInWithGoogle(bool silent = false)
+        /// <summary>Inspector On Click(): show the Google account picker.</summary>
+        public void SignInWithGoogle()
+        {
+            SignIn(_google, silent: false);
+        }
+
+        public void SignInWithGoogle(bool silent)
         {
             SignIn(_google, silent);
+        }
+
+        /// <summary>Inspector On Click(): Facebook Login, then PlayFab LoginWithFacebook.</summary>
+        public void SignInWithFacebook()
+        {
+            SignIn(_facebook, silent: false);
+        }
+
+        /// <summary>Inspector On Click(): Facebook Login with Instagram permissions, then PlayFab LoginWithFacebook.</summary>
+        public void SignInWithInstagram()
+        {
+            SignIn(_instagram, silent: false);
         }
 
         public void SignOut()
         {
             _google?.SignOut();
+            _facebook?.SignOut();
+            _instagram?.SignOut();
             IsSignedIn = false;
             IsBusy = false;
             CurrentSession = null;
@@ -126,6 +158,7 @@ namespace SadibTools.AuthLogin
             }
 
             IsBusy = true;
+            OnLoginStarted?.Invoke(provider.ProviderId);
             provider.SignIn(
                 silent,
                 onSuccess: result =>

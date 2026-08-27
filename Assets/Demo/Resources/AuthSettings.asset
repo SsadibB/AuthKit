@@ -13,3 +13,5 @@ MonoBehaviour:
   m_Name: AuthSettings
   m_EditorClassIdentifier: Sadib.AuthLogin::SadibTools.AuthLogin.AuthSettings
   googleWebClientId: 639476355618-47hul55gev7ummn5qhej7r1rs6flv5ge.apps.googleusercontent.com
+  facebookAppId: 1563688501428231
+  facebookClientToken: 868ecabf5c2fc9f3ff6fa8e717b563b0

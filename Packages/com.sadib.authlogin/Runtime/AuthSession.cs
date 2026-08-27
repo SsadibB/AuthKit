@@ -36,7 +36,9 @@ namespace SadibTools.AuthLogin
             if (account != null)
             {
                 email = account.PrivateInfo?.Email ?? account.GoogleInfo?.GoogleEmail;
-                displayName = account.TitleInfo?.DisplayName ?? account.GoogleInfo?.GoogleName;
+                displayName = account.TitleInfo?.DisplayName
+                              ?? account.GoogleInfo?.GoogleName
+                              ?? account.FacebookInfo?.FullName;
             }
 
             if (string.IsNullOrEmpty(displayName))

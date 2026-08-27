@@ -7,12 +7,18 @@ dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
 // Android Resolver Dependencies Start
     implementation 'com.google.android.gms:play-services-auth:21.3.0' // Packages/com.sadib.authlogin/Editor/AuthLoginDependencies.xml:8
+    implementation 'com.parse.bolts:bolts-android:1.4.0' // Assets/FacebookSDK/Plugins/Editor/Dependencies.xml
+    implementation 'com.facebook.android:facebook-core:18.0.3' // Assets/FacebookSDK/Plugins/Editor/Dependencies.xml
+    implementation 'com.facebook.android:facebook-applinks:18.0.3' // Assets/FacebookSDK/Plugins/Editor/Dependencies.xml
+    implementation 'com.facebook.android:facebook-login:18.0.3' // Assets/FacebookSDK/Plugins/Editor/Dependencies.xml
+    implementation 'com.facebook.android:facebook-share:18.0.3' // Assets/FacebookSDK/Plugins/Editor/Dependencies.xml
+    implementation 'com.facebook.android:facebook-gamingservices:18.0.3' // Assets/FacebookSDK/Plugins/Editor/Dependencies.xml
 // Android Resolver Dependencies End
 **DEPS**}
 
 // Android Resolver Exclusions Start
 android {
-  packagingOptions {
+  packaging {
       exclude ('/lib/armeabi/*' + '*')
       exclude ('/lib/armeabi-v7a/*' + '*')
       exclude ('/lib/mips/*' + '*')
