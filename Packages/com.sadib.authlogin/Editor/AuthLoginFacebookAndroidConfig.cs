@@ -69,21 +69,47 @@ namespace SadibTools.AuthLogin.Editor
         /// </summary>
         private static string ResolveStringsPath()
         {
-            // Search for the androidlib's project.properties file — present in both install modes.
+            // 1. Check direct standard UPM path
+            string upmFullPath = Path.GetFullPath(FallbackStringsPath);
+            if (File.Exists(upmFullPath) || Directory.Exists(Path.GetDirectoryName(upmFullPath)))
+            {
+                return FallbackStringsPath;
+            }
+
+            // 2. Search filesystem in Assets and Packages
+            try
+            {
+                string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+                foreach (string searchDir in new[] { Path.Combine(projectRoot, "Assets"), Path.Combine(projectRoot, "Packages") })
+                {
+                    if (Directory.Exists(searchDir))
+                    {
+                        string[] matchingDirs = Directory.GetDirectories(searchDir, AndroidLibName, SearchOption.AllDirectories);
+                        if (matchingDirs.Length > 0)
+                        {
+                            return Path.Combine(matchingDirs[0], StringsRelativePath);
+                        }
+                    }
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning("[AuthLogin] Disk search for " + AndroidLibName + ": " + ex.Message);
+            }
+
+            // 3. AssetDatabase fallback
             string[] guids = AssetDatabase.FindAssets("project.properties");
             foreach (string guid in guids)
             {
                 string assetPath = AssetDatabase.GUIDToAssetPath(guid);
                 if (assetPath.Contains(AndroidLibName))
                 {
-                    // Strip the filename to get the library root, then append the target path.
                     int lastSlash = assetPath.LastIndexOf('/');
                     string libRoot = assetPath.Substring(0, lastSlash);
                     return libRoot + "/" + StringsRelativePath;
                 }
             }
 
-            Debug.LogWarning("[AuthLogin] Could not locate " + AndroidLibName + " via AssetDatabase. Using fallback path.");
             return FallbackStringsPath;
         }
 
